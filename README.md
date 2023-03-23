@@ -1,4 +1,4 @@
-# AWS CDK Examples - in Python
+# Amazon SageMaker CDK Examples
 
 This repository contains examples of how to use Amazon SageMaker with the [AWS Cloud Development
 Kit](https://github.com/awslabs/aws-cdk).
