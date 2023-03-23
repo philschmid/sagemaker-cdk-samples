@@ -1,0 +1,112 @@
+us-east-1
+763104351884
+arn:aws:ecr:us-east-1:763104351884:repository/{repositoryName}
+Resources:
+  HuggingFaceModelRoleDA17DA00:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/AmazonSageMakerFullAccess
+    Metadata:
+      aws:cdk:path: RealTimeEndpointHuggingfaceStack/HuggingFaceModel/Role/Resource
+  HuggingFaceModelRoleDefaultPolicy50587D35:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - ecr:BatchCheckLayerAvailability
+              - ecr:BatchGetImage
+              - ecr:GetDownloadUrlForLayer
+            Effect: Allow
+            Resource: arn:aws:ecr:us-east-1:763104351884:repository/{repositoryName}
+          - Action: ecr:GetAuthorizationToken
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      PolicyName: HuggingFaceModelRoleDefaultPolicy50587D35
+      Roles:
+        - Ref: HuggingFaceModelRoleDA17DA00
+    Metadata:
+      aws:cdk:path: RealTimeEndpointHuggingfaceStack/HuggingFaceModel/Role/DefaultPolicy/Resource
+  HuggingFaceModel8E13DAA5:
+    Type: AWS::SageMaker::Model
+    Properties:
+      ExecutionRoleArn:
+        Fn::GetAtt:
+          - HuggingFaceModelRoleDA17DA00
+          - Arn
+      PrimaryContainer:
+        Environment:
+          HF_MODEL_ID: distilbert-base-uncased-finetuned-sst-2-english
+          HF_TASK: text-classification
+        Image:
+          Fn::Join:
+            - ""
+            - - 763104351884.dkr.ecr.us-east-1.
+              - Ref: AWS::URLSuffix
+              - /huggingface-pytorch-inference:1.13-cpu-py39
+    DependsOn:
+      - HuggingFaceModelRoleDefaultPolicy50587D35
+      - HuggingFaceModelRoleDA17DA00
+    Metadata:
+      aws:cdk:path: RealTimeEndpointHuggingfaceStack/HuggingFaceModel/Model
+  EndpointConfigFD7B6F91:
+    Type: AWS::SageMaker::EndpointConfig
+    Properties:
+      ProductionVariants:
+        - InitialInstanceCount: 1
+          InitialVariantWeight: 1
+          InstanceType: ml.m5.large
+          ModelName:
+            Fn::GetAtt:
+              - HuggingFaceModel8E13DAA5
+              - ModelName
+          VariantName: primary
+    Metadata:
+      aws:cdk:path: RealTimeEndpointHuggingfaceStack/EndpointConfig/EndpointConfig
+  Endpoint8024A810:
+    Type: AWS::SageMaker::Endpoint
+    Properties:
+      EndpointConfigName:
+        Fn::GetAtt:
+          - EndpointConfigFD7B6F91
+          - EndpointConfigName
+    Metadata:
+      aws:cdk:path: RealTimeEndpointHuggingfaceStack/Endpoint/Endpoint
+  CDKMetadata:
+    Type: AWS::CDK::Metadata
+    Properties:
+      Analytics: v2:deflate64:H4sIAAAAAAAA/12OwQqDMBBEv8V7XLUF6bFUeiyU9ANKGle7GhNJtEWC/16tUqSnmX0DM7uD9AA+DsTbhTKvQ0UP8LdOyJpN6O5RWuDYGkedscNJOGQkGvDcKGRZob96NYrkMJ+LG5kTJTaiRgt+oheTo5rjs85bQ7rLjC6o3JJxZByd6a1calc/sjgUqn0KiIPj+mM0629gjf2y8TewaddTDpWLXkkKyX6qqxxRaHvdUYPAF/0AwqMdEQ4BAAA=
+    Metadata:
+      aws:cdk:path: RealTimeEndpointHuggingfaceStack/CDKMetadata/Default
+Parameters:
+  BootstrapVersion:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /cdk-bootstrap/hnb659fds/version
+    Description: Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]
+Rules:
+  CheckBootstrapVersion:
+    Assertions:
+      - Assert:
+          Fn::Not:
+            - Fn::Contains:
+                - - "1"
+                  - "2"
+                  - "3"
+                  - "4"
+                  - "5"
+                - Ref: BootstrapVersion
+        AssertDescription: CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.
+
